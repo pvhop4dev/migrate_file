@@ -1,0 +1,13 @@
+samba:
+  host: 
+  port: 445
+  user: root
+  password: 
+  share: sharing
+
+direction: GET_FILE # GET_FILE or PUT_FILE
+
+folders: 
+  - TEST/T1
+  - TEST/T2
+
