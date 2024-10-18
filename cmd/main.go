@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"io/fs"
@@ -18,18 +19,23 @@ func init() {
 	if err != nil {
 		log.Panic(fmt.Errorf("lỗi khi mở tệp log %s", err))
 	}
-	log.SetOutput(logFile)
-	log.Printf("-------------------------------START-----------------------------------")
+	multiWriter := io.MultiWriter(os.Stdout, logFile)
+	log.SetOutput(multiWriter)
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
+	log.Printf("-------------------------------START-----------------------------------")
 }
 
 const up = "PUT_FILE"
 const down = "GET_FILE"
 
 func main() {
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
+	// viper.SetConfigName("config")
+	// viper.SetConfigType("yaml")
+	// viper.AddConfigPath(".")
+	configFile := flag.String("config", "config.yml", "Đường dẫn đến file cấu hình")
+	log.Println("Đang đọc file cấu hình: ", *configFile)
+	flag.Parse()
+	viper.SetConfigFile(*configFile)
 
 	if err := viper.ReadInConfig(); err != nil {
 		log.Panic(fmt.Errorf("lỗi khi đọc file cấu hình %s", err))
@@ -57,7 +63,7 @@ func main() {
 			GetFolder(folder, share)
 		}
 	default:
-		log.Panic("Invalid direction")
+		log.Panic("Direction không hợp lệ")
 	}
 	log.Println("-------------------------------DONE-----------------------------------")
 }
@@ -111,13 +117,13 @@ func PutFile(share *smb2.Share, file fs.DirEntry, localFilePath string, remoteFi
 	err := share.MkdirAll(dirPath, 0755)
 	if err != nil {
 		log.Printf("lỗi khi tạo thư mục %s err:%s", dirPath, err)
-		return // Exit the function if the directory cannot be created
+		return
 	}
 	// Mở tệp cục bộ
 	localFile, err := os.Open(localFilePath)
 	if err != nil {
 		log.Printf("lỗi khi mở tệp cục bộ %s err:%s", localFilePath, err)
-		return // Exit the function if the local file does not exist
+		return
 	}
 	// defer localFile.Close()
 
@@ -142,7 +148,7 @@ func PutFile(share *smb2.Share, file fs.DirEntry, localFilePath string, remoteFi
 		return
 	}
 
-	log.Println("Đã tải và xóa tệp:", file.Name())
+	log.Println("Đã đẩy lên tệp và xóa tệp ở máy nội bộ:", file.Name())
 }
 
 func GetFolder(folder string, share *smb2.Share) {
@@ -172,7 +178,7 @@ func GetFile(share *smb2.Share, file fs.FileInfo, localFilePath string, remoteFi
 	err = os.MkdirAll(dirPath, 0755)
 	if err != nil {
 		log.Printf("lỗi khi tạo thư mục %s err:%s", dirPath, err)
-		return // Exit the function if the directory cannot be created
+		return
 	}
 	// Tạo tệp cục bộ
 	localFile, err := os.Create(localFilePath)
